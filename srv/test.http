@@ -1,0 +1,8 @@
+POST http://localhost:4004/catalog/Books
+Content-Type: application/json;odata.metadata=minimal
+
+{"ID": 7, "title": "5 AM Club" , "stock" : 100}
+
+###############
+GET  http://localhost:4004/catalog/triggerMail(mailID='parthibaraja.ps@gmail.com')
+Content-Type: application/json;odata.metadata=minimal

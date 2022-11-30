@@ -1,0 +1,91 @@
+_schema-version: "3.1"
+ID: triggeremail
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: triggeremail-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: triggeremail-db
+  - name: triggeremail-destination-service
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+  build-parameters:
+    builder: npm-ci
+- name: triggeremail-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: triggeremail-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: triggeremail-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: triggeremail-destination-service
+    parameters:
+      content-target: true
+  - name: triggeremail_html_repo_host
+    parameters:
+      service-key:
+        name: triggeremail_html_repo_host-key
+  - name: uaa_triggeremail
+    parameters:
+      service-key:
+        name: uaa_triggeremail-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: TriggerEmail_triggeremail_html_repo_host
+          ServiceInstanceName: triggeremail-html5-app-host-service
+          ServiceKeyName: triggeremail_html_repo_host-key
+          sap.cloud.service: TriggerEmail
+        - Authentication: OAuth2UserTokenExchange
+          Name: TriggerEmail_uaa_triggeremail
+          ServiceInstanceName: triggeremail-xsuaa-service
+          ServiceKeyName: uaa_triggeremail-key
+          sap.cloud.service: TriggerEmail
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+resources:
+- name: triggeremail-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+- name: triggeremail-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      version: 1.0.0
+    service: destination
+    service-name: triggeremail-destination-service
+    service-plan: lite
+- name: triggeremail_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: triggeremail-html5-app-host-service
+    service-plan: app-host
+- name: uaa_triggeremail
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: triggeremail-xsuaa-service
+    service-plan: application
+parameters:
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npx -p @sap/cds-dk cds build --production
